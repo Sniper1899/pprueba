@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMART</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* CSS General - Estilo Cómic Nocturno */
+        body { font-family: 'Inter', sans-serif; background-color: #0c1427; }
+        .comic-title { font-family: 'Bangers', cursive; -webkit-text-stroke: 2px black; text-shadow: 3px 3px 0px #000; }
+        
+        .game-container {
+            background-color: #1a202c;
+            background-image: linear-gradient(rgba(26, 32, 44, 0.9), rgba(26, 32, 44, 0.9)), 
+                              linear-gradient(0deg, transparent 24px, rgba(45, 212, 191, 0.1) 25px, rgba(45, 212, 191, 0.1) 26px, transparent 27px, transparent 79px),
+                              linear-gradient(90deg, transparent 24px, rgba(45, 212, 191, 0.1) 25px, rgba(45, 212, 191, 0.1) 26px, transparent 27px, transparent 79px);
+            background-size: 100% 100%, 80px 80px, 80px 80px;
+            border: 4px solid #000;
+            box-shadow: 0 0 0 10px #0c1427;
+            overflow-x: hidden;
+        }
+
+        /* Transiciones de pantalla */
+        .screen { transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out; }
+        .screen.hidden { opacity: 0; pointer-events: none; }
+        .screen.overlay { position: absolute; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; }
+
+        
+        /* Panel de Cristal Difuminado para legibilidad */
+        .glass-panel-comic {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(8px);
+            border: 3px solid #083344;
+        }
+        
+        /* Estilos de las tarjetas de heroe */
+        .hero-card { 
+            transition: all 0.2s ease; 
+            box-shadow: 5px 5px 0px #000;
+            cursor: pointer;
+        }
+        .hero-card:hover {
+            transform: translateY(-5px) translateX(-5px);
+            box-shadow: 10px 10px 0px #14b8a6;
+        }
+        .hero-card.selected { 
+            border-color: #14b8a6; 
+            transform: translateY(-5px) translateX(-5px);
+            box-shadow: 10px 10px 0px #14b8a6;
+            background-color: rgba(15, 23, 42, 0.8);
+        }
+        
+        /* Modal personalizado */
+        .custom-modal { background-color: rgba(26, 32, 44, 0.8); backdrop-filter: blur(4px); }
+        .modal-panel {
+             box-shadow: 8px 8px 0px black;
+        }
+
+        /* Estilos de los Módulos del Plan */
+        #plan-hub-container { position: relative; width: 350px; height: 350px; }
+        #central-core {
+            width: 100px; height: 100px;
+            background-color: #0f172a; border: 3px solid #083344; border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            box-shadow: 0 0 25px rgba(20, 184, 166, 0.5);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .plan-module {
+            width: 80px; height: 80px;
+            cursor: pointer; border: 3px solid #475569; color: #475569; transition: all 0.3s ease;
+            font-family: 'Bangers', cursive; position: absolute;
+            background-color: #1e293b;
+        }
+        .plan-module.unlocked { 
+            border-color: #14b8a6; color: #14b8a6; 
+            animation: pulse-teal 2s infinite;
+        }
+        .plan-module.unlocked:hover { background-color: #14b8a6; color: #0f172a; transform: scale(1.1); }
+        .plan-module.completed { 
+            background-color: #16a34a; border-color: #16a34a; color: #fff; cursor: default;
+            animation: none;
+        }
+        @keyframes pulse-teal {
+            0% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(20, 184, 166, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
+        }
+        
+        /* Boton de genero seleccionado */
+        .gender-btn.selected {
+            border-color: #14b8a6;
+            color: #0f172a;
+            background-color: #14b8a6;
+        }
+        
+        /* Burbujas de chat */
+        .chat-bubble { max-width: 80%; box-shadow: 3px 3px 0 #000; }
+        .chat-bubble-cortex { background-color: rgba(30, 41, 59, 0.8); }
+        .chat-bubble-user { background-color: rgba(8, 51, 68, 0.85); }
+
+        /* Botón estilo comic */
+        .comic-btn {
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0 #000;
+            transition: all 0.15s ease-out;
+            font-family: 'Bangers', cursive;
+            letter-spacing: 1px;
+        }
+        .comic-btn:hover:not(:disabled) {
+            transform: translateY(4px) translateX(4px);
+            box-shadow: 0 0 0 #000;
+        }
+        .comic-btn:disabled {
+            background-color: #475569 !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed;
+        }
+
+        /* Input estilo comic */
+        .comic-input {
+            border: 3px solid #475569;
+            background-color: #1e293b;
+            color: #e2e8f0;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .comic-input:focus {
+            outline: none;
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.5);
+        }
+
+        /* Typing indicator */
+        .typing-indicator span {
+            height: 10px;
+            width: 10px;
+            background-color: #14b8a6;
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-of-type(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-of-type(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 
+            0%, 80%, 100% { transform: scale(0); } 
+            40% { transform: scale(1.0); } 
+        }
+
+        /* Report Card for sharing */
+        #report-card {
+            position: absolute;
+            left: -9999px; /* Hide off-screen */
+            width: 400px;
+            padding: 24px;
+            background-color: #1a202c;
+            color: #e2e8f0;
+            border: 4px solid #000;
+        }
+        .watermark {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            font-family: 'Bangers', cursive;
+            font-size: 16px;
+            color: #475569;
+            opacity: 0.8;
+        }
+        
+        /* ESTILOS: Ranking y Racha */
+        #ranking-container {
+            border: 4px solid #083344;
+            box-shadow: 5px 5px 0px #000;
+        }
+        .ranking-row {
+            display: grid;
+            grid-template-columns: 30px 1fr 80px 60px;
+            gap: 8px;
+            align-items: center;
+        }
+        .ranking-row.header {
+             font-family: 'Bangers', cursive;
+             letter-spacing: 1px;
+        }
+        .ranking-row.my-rank {
+            background-color: rgba(20, 184, 166, 0.2);
+            border: 2px solid #14b8a6;
+            border-radius: 8px;
+        }
+        .streak-icon { animation: fire-flicker 1.5s infinite alternate; }
+        @keyframes fire-flicker {
+            0% { color: #f59e0b; text-shadow: 0 0 5px #f59e0b; }
+            100% { color: #facc15; text-shadow: 0 0 10px #facc15; }
+        }
+
+        /* Estilos Perfil e Historial */
+        .goal-history-item {
+            background-color: #1e293b;
+            border: 2px solid #334155;
+            transition: all 0.2s ease;
+        }
+        .goal-history-item:hover {
+            border-color: #14b8a6;
+            background-color: #334155;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen text-gray-300">
+    <div class="w-screen h-screen overflow-auto relative game-container">
+
+        <!-- PANTALLAS DEL JUEGO -->
+
+        <!-- Pantalla de Autenticación -->
+        <div id="auth-screen" class="screen absolute inset-0 p-4 md:p-8 flex flex-col items-center justify-center text-center">
+            <div class="w-full max-w-sm mx-auto">
+                <h1 class="comic-title text-5xl md:text-6xl text-teal-400">SMART</h1>
+                <p class="text-gray-400 mb-6">Inicia sesión o regístrate para guardar tu progreso.</p>
+                <div class="glass-panel-comic p-6 rounded-lg space-y-4">
+                    <input type="email" id="auth-email" class="comic-input w-full p-3 text-lg rounded-md" placeholder="Correo electrónico">
+                    <input type="password" id="auth-password" class="comic-input w-full p-3 text-lg rounded-md" placeholder="Contraseña">
+                    <div class="flex space-x-4">
+                        <button id="login-btn" class="comic-btn w-full p-3 bg-teal-500 text-slate-900 text-xl rounded-md">INICIAR SESIÓN</button>
+                        <button id="register-btn" class="comic-btn w-full p-3 bg-sky-500 text-white text-xl rounded-md">REGISTRAR</button>
+                    </div>
+                     <button id="forgot-password-btn" class="text-sm text-gray-400 hover:text-teal-400 hover:underline">Olvidé mi contraseña</button>
+                </div>
+                <button id="anonymous-login-btn" class="mt-6 text-gray-400 hover:text-teal-400 hover:underline">Continuar como invitado</button>
+            </div>
+        </div>
+        
+        <!-- Pantalla de Introducción -->
+        <div id="intro-screen" class="screen absolute inset-0 p-4 md:p-8 flex flex-col items-center justify-center text-center hidden">
+             <div class="w-full max-w-sm mx-auto">
+                <h1 class="comic-title text-5xl md:text-6xl text-teal-400">¡A LA CARGA!</h1>
+                <div id="welcome-message" class="text-lg text-gray-300 my-4"></div>
+
+                <div id="streak-counter" class="mb-6 text-center"></div>
+                
+                <div id="intro-form-container">
+                    <div class="glass-panel-comic p-4 rounded-lg">
+                        <p id="intro-text" class="text-gray-200 text-lg">>> La ciudad te necesita...</p>
+                        <input type="text" id="name-input" class="comic-input w-full text-center mt-4 p-2 text-lg rounded-md" placeholder="¿Cuál es tu alias de héroe?">
+                    </div>
+                    <div id="gender-selection" class="mt-6 w-full">
+                        <p class="mb-2 text-gray-400">Preséntate:</p>
+                        <div class="flex justify-center space-x-4">
+                            <button id="gender-male" class="gender-btn comic-btn p-2 w-32 bg-slate-700 border-2 border-slate-800 rounded-md text-gray-300 transition">HÉROE</button>
+                            <button id="gender-female" class="gender-btn comic-btn p-2 w-32 bg-slate-700 border-2 border-slate-800 rounded-md text-gray-300 transition">HEROÍNA</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 space-y-3">
+                    <button id="continue-intro-btn" class="comic-btn w-full p-3 bg-teal-500 text-slate-900 text-2xl rounded-md transition flex-shrink-0">ACEPTAR MISIÓN</button>
+                    <button id="profile-btn" class="comic-btn w-full p-2 bg-slate-600 text-white text-xl rounded-md transition flex-shrink-0 hidden">MI PERFIL</button>
+                    <button id="show-ranking-btn" class="comic-btn w-full p-2 bg-yellow-400 text-black text-xl rounded-md transition flex-shrink-0 hidden">VER RANKING</button>
+                    <button id="save-progress-btn" class="comic-btn w-full p-2 bg-green-500 text-white text-xl rounded-md transition flex-shrink-0 hidden">GUARDAR PROGRESO</button>
+                    <button id="logout-btn" class="comic-btn w-full p-2 bg-red-600 text-white text-xl rounded-md transition flex-shrink-0 hidden">CERRAR SESIÓN</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Selección de Héroe -->
+        <div id="hero-select-screen" class="screen absolute inset-0 p-6 flex flex-col items-center justify-center hidden overflow-y-auto">
+            <div class="w-full flex-grow flex flex-col items-center justify-center">
+                <h2 class="comic-title text-5xl text-center text-teal-400 mt-8">ELIGE TU PODER</h2>
+                <p class="text-center text-gray-400 mb-6">Demuestra tu valía, <span id="hero-select-name"></span>.</p>
+                 <div id="hero-list" class="space-y-4 w-full max-w-sm">
+                    <div class="hero-card glass-panel-comic p-4 rounded-lg flex items-center space-x-4" data-hero="Lúmen">
+                        <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-3xl border-2 border-black">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z" /><path fill-rule="evenodd" d="M.458 10C3.732 4.943 7.523 3 10 3s6.268 1.943 9.542 7c-3.274 5.057-7.03 7-9.542 7S3.732 15.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" /></svg>
+                        </div>
+                        <div><h3 class="text-xl text-blue-300">EL INVESTIGADOR</h3><p class="text-sm text-gray-400">Con el poder de la VERDAD.</p></div>
+                    </div>
+                    <div class="hero-card glass-panel-comic p-4 rounded-lg flex items-center space-x-4" data-hero="Consenso">
+                        <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center text-3xl border-2 border-black">
+                           <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" viewBox="0 0 20 20" fill="currentColor"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" /></svg>
+                        </div>
+                        <div><h3 class="text-xl text-yellow-300">LA CARTÓGRAFA</h3><p class="text-sm text-gray-400">Para exponer INJUSTICIAS.</p></div>
+                    </div>
+                     <div class="hero-card glass-panel-comic p-4 rounded-lg flex items-center space-x-4" data-hero="Oráculo">
+                        <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-3xl border-2 border-black">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-white" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 3a1 1 0 00-1.447-.894L8.763 6H8a1 1 0 000 2h.586l-1.24 1.24A1 1 0 008 11v1a1 1 0 001 1h.243l-1.148 1.148a1 1 0 001.414 1.414l2-2a1 1 0 000-1.414l-2-2a1 1 0 00-1.414 0l.293.293a1 1 0 000 1.414L9 14.586V13h-.414l.243-.243a1 1 0 00.707-1.707L10 10.586l1.24-1.24a1 1 0 000-1.414L10 6.686V6h.414l5.657-4.043A1 1 0 0018 3z" clip-rule="evenodd" /></svg>
+                        </div>
+                        <div><h3 class="text-xl text-green-300">EL ORADOR</h3><p class="text-sm text-gray-400">Y movilizar a las MASAS.</p></div>
+                    </div>
+                </div>
+            </div>
+            <button id="confirm-hero-btn" class="comic-btn my-8 w-full max-w-sm p-3 bg-slate-600 text-slate-400 text-2xl rounded-md transition flex-shrink-0" disabled>¡A LA MISIÓN!</button>
+        </div>
+
+        <!-- Pantalla de Video -->
+        <div id="video-screen" class="screen absolute inset-0 bg-black flex items-center justify-center hidden"><video id="video-player" class="w-full h-full object-cover" playsinline></video></div>
+        
+        <!-- Pantalla de Carga (Overlay) -->
+        <div id="loading-screen" class="screen overlay custom-modal hidden">
+            <h2 id="loading-text" class="comic-title text-4xl text-teal-400 animate-pulse"></h2>
+        </div>
+        
+        <!-- Pantalla de Ingreso de Meta -->
+        <div id="goal-input-screen" class="screen absolute inset-0 p-8 flex flex-col justify-center items-center text-center hidden">
+            <h2 class="comic-title text-5xl text-teal-400">DEFINE EL OBJETIVO</h2>
+            <div class="glass-panel-comic p-4 mt-4 rounded-lg">
+                <p class="text-gray-400 mb-4 max-w-sm">Introduce tu meta secreta para acceder al plan.</p>
+                <textarea id="goal-password-input" class="comic-input w-full max-w-sm h-24 p-3 rounded-md" placeholder="Ej: Aprender a tocar guitarra, empezar un podcast, organizar una limpieza en mi calle..."></textarea>
+            </div>
+            <button id="confirm-goal-btn" class="comic-btn mt-6 w-full max-w-sm p-3 bg-teal-500 text-slate-900 text-2xl rounded-md transition">ACTIVAR PLAN</button>
+            <p id="help-goal-btn" class="text-teal-400 text-sm mt-4 cursor-pointer hover:underline">
+                ¿Aún no sabes qué meta trazar? Entra aquí
+            </p>
+        </div>
+        
+        <!-- Pantalla de Ayuda para la Meta (Chat) -->
+        <div id="goal-helper-screen" class="screen absolute inset-0 p-6 flex flex-col hidden">
+            <h2 class="comic-title text-4xl text-center text-teal-400">COMUNICADOR</h2>
+            <p class="text-center text-gray-400 mb-4">Cortex en línea.</p>
+            <div id="chat-window" class="flex-grow w-full max-w-sm mx-auto p-4 space-y-4 overflow-y-auto">
+                <!-- Los mensajes del chat se agregarán aquí -->
+            </div>
+            <div class="mt-4 w-full max-w-sm mx-auto flex-shrink-0">
+                 <input type="text" id="chat-input" class="comic-input w-full p-3 rounded-md" placeholder="Responde a Cortex...">
+                 <button id="send-chat-btn" class="comic-btn mt-2 w-full p-3 bg-teal-500 text-slate-900 text-xl rounded-md">ENVIAR</button>
+            </div>
+        </div>
+
+        <!-- Pantalla Central de Módulos -->
+        <div id="plan-hub-screen" class="screen absolute inset-0 p-8 flex flex-col justify-center items-center text-center hidden">
+            <h2 class="comic-title text-5xl text-teal-400">EL NÚCLEO DEL PLAN</h2>
+            <p class="text-gray-400 mt-2 mb-8 max-w-sm">Activa los 5 módulos para desatar todo tu potencial.</p>
+            <div id="plan-hub-container">
+                <div id="central-core">
+                    <svg class="h-12 w-12 text-teal-400 animate-pulse" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <div id="module-s" class="plan-module rounded-full flex items-center justify-center text-5xl">S</div>
+                <div id="module-m" class="plan-module rounded-full flex items-center justify-center text-5xl">M</div>
+                <div id="module-a" class="plan-module rounded-full flex items-center justify-center text-5xl">A</div>
+                <div id="module-r" class="plan-module rounded-full flex items-center justify-center text-5xl">R</div>
+                <div id="module-t" class="plan-module rounded-full flex items-center justify-center text-5xl">T</div>
+            </div>
+        </div>
+
+        <!-- Pantalla de Misión -->
+        <div id="mission-screen" class="screen absolute inset-0 flex flex-col hidden">
+            <div class="p-4 bg-slate-900/50 border-b-4 border-black flex-shrink-0">
+                 <h2 class="comic-title text-4xl text-center text-teal-400">¡EN ACCIÓN!</h2>
+                 <p id="mission-objective" class="text-center text-gray-400 text-sm"></p>
+                 <div class="w-full bg-slate-700 rounded-full h-4 mt-2 border-2 border-black"><div id="progress-bar" class="bg-yellow-400 h-full rounded-full" style="width: 0%"></div></div>
+            </div>
+            <div class="flex-grow p-6 overflow-y-auto flex flex-col items-center"><div id="module-container" class="relative w-full max-w-sm h-full flex items-center"></div></div>
+             <div class="p-4 w-full max-w-md mx-auto flex-shrink-0">
+                <input type="text" id="mission-input" class="comic-input w-full p-3 rounded-md" placeholder="¡Introduce tu estrategia!">
+                <button id="submit-step-btn" class="comic-btn mt-2 w-full p-3 bg-teal-500 text-slate-900 text-xl rounded-md">ENVIAR A CORTEX</button>
+            </div>
+        </div>
+        
+        <!-- Modal de Feedback (Overlay) -->
+        <div id="feedback-modal" class="screen overlay custom-modal hidden p-6">
+             <div id="feedback-content" class="text-center glass-panel-comic p-6 rounded-lg modal-panel max-w-sm">
+                <h3 id="feedback-title" class="comic-title text-4xl"></h3>
+                <p id="feedback-text" class="text-gray-300 my-4"></p>
+                <button id="feedback-ok-btn" class="comic-btn w-full p-2 bg-teal-500 text-slate-900 text-xl rounded-md">¡ENTENDIDO!</button>
+            </div>
+        </div>
+
+        <!-- Modal de Éxito (Overlay) -->
+        <div id="success-modal" class="screen overlay custom-modal hidden p-6 overflow-y-auto">
+            <div class="w-full max-w-sm my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel">
+                <div class="text-center">
+                    <h2 class="comic-title text-6xl text-green-400">¡VICTORIA!</h2>
+                    <p class="text-gray-300">¡Misión cumplida, <span id="success-name"></span>! Tu plan fue un éxito rotundo.</p>
+                    <p class="text-yellow-400 mt-2 text-xl">+100 PUNTOS</p>
+                </div>
+                
+                <div id="ai-summary-container" class="mt-6 text-left space-y-2 text-gray-200">
+                    <!-- Summary paragraph will go here -->
+                </div>
+                <div id="ai-recommendations-container" class="mt-6 text-left space-y-2 text-gray-200">
+                    <!-- Recommendations will go here -->
+                </div>
+
+                <div class="mt-8 text-left text-gray-400 text-xs uppercase">Tu Plan Detallado:</div>
+                 <div id="final-plan" class="mt-2 p-4 bg-slate-900/50 rounded-lg text-left text-sm space-y-1 border-2 border-slate-700"></div>
+                <div class="mt-8 flex space-x-4">
+                    <button id="generate-report-btn" class="comic-btn w-full p-3 bg-sky-500 text-white text-xl rounded-md">GENERAR REPORTE</button>
+                    <button id="restart-btn" class="comic-btn w-full p-3 bg-yellow-400 text-black text-xl rounded-md">INICIO</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal para Compartir Reporte -->
+        <div id="share-modal" class="screen overlay custom-modal hidden p-6">
+            <div class="w-full max-w-sm my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel">
+                <h3 class="comic-title text-4xl text-center text-teal-400">¡Comparte tu Logro!</h3>
+                <img id="report-image" class="mt-4 rounded-lg border-2 border-slate-700" src="" alt="Reporte de Misión">
+                <div class="mt-6 flex space-x-4">
+                    <button id="share-btn" class="comic-btn w-full p-3 bg-teal-500 text-slate-900 text-xl rounded-md">Compartir</button>
+                    <a id="download-btn" class="comic-btn w-full p-3 bg-sky-500 text-white text-xl rounded-md text-center" href="#" download="mi-plan-smart.png">Descargar</a>
+                </div>
+                <button id="close-share-btn" class="mt-4 text-gray-400 hover:underline">Cerrar</button>
+            </div>
+        </div>
+        
+        <!-- Modal de Notificación de Bienvenida -->
+        <div id="comeback-notification-modal" class="screen overlay custom-modal hidden p-6">
+            <div class="w-full max-w-sm my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel text-center">
+                <h3 class="comic-title text-5xl text-yellow-400">¡HEY!</h3>
+                <p id="comeback-message" class="text-gray-200 text-lg my-4"></p>
+                <button id="close-comeback-btn" class="comic-btn w-full p-3 bg-teal-500 text-slate-900 text-xl rounded-md">OK, YA VOLVÍ</button>
+            </div>
+        </div>
+
+        <!-- Modal Límite Diario -->
+        <div id="limit-modal" class="screen overlay custom-modal hidden p-6">
+            <div class="w-full max-w-sm my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel text-center">
+                <h3 class="comic-title text-5xl text-red-500">¡ALTO AHÍ!</h3>
+                <p class="text-gray-200 text-lg my-4">Has completado tus 3 misiones de hoy. ¡Un héroe también necesita descansar! Vuelve mañana para seguir sumando puntos.</p>
+                <button id="close-limit-btn" class="comic-btn w-full p-3 bg-teal-500 text-slate-900 text-xl rounded-md">¡ENTENDIDO!</button>
+            </div>
+        </div>
+
+         <!-- Modal Permiso Notificaciones -->
+        <div id="notifications-modal" class="screen overlay custom-modal hidden p-6">
+            <div class="w-full max-w-sm my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel text-center">
+                <h3 class="comic-title text-4xl text-yellow-400">¡MANTENTE ALERTA!</h3>
+                <p class="text-gray-200 text-lg my-4">¿Quieres recibir notificaciones para no perder tu racha o si alguien supera tu puntuación?</p>
+                <div class="flex space-x-4 mt-6">
+                     <button id="deny-notifications-btn" class="comic-btn w-full p-3 bg-slate-600 text-slate-300 text-lg rounded-md">NO, GRACIAS</button>
+                    <button id="allow-notifications-btn" class="comic-btn w-full p-3 bg-teal-500 text-slate-900 text-lg rounded-md">¡SÍ, ACTIVAR!</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal del Ranking -->
+        <div id="ranking-modal" class="screen overlay custom-modal hidden p-4">
+            <div class="w-full max-w-lg my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel">
+                 <h3 class="comic-title text-4xl text-yellow-400 text-center">TOP 10 HÉROES</h3>
+                    <div id="ranking-table" class="mt-4 text-left space-y-2">
+                        <div class="ranking-row header text-gray-400 text-sm">
+                            <span>#</span><span>Alias</span><span>Racha</span><span>Pts</span>
+                        </div>
+                        <div id="ranking-list" class="space-y-2">
+                            <!-- Filas del ranking se insertan aquí -->
+                        </div>
+                        <hr class="border-slate-600 my-2">
+                        <div id="my-ranking" class="text-sm">
+                           <!-- Mi ranking se inserta aquí -->
+                        </div>
+                    </div>
+                <button id="close-ranking-btn" class="comic-btn w-full p-2 mt-6 bg-teal-500 text-slate-900 text-xl rounded-md">CERRAR</button>
+            </div>
+        </div>
+        
+        <!-- Modal de Perfil e Historial -->
+        <div id="profile-modal" class="screen overlay custom-modal hidden p-4">
+            <div class="w-full max-w-lg my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel">
+                 <h3 class="comic-title text-4xl text-teal-400 text-center">MI PERFIL</h3>
+                 
+                 <!-- Sección Editar Perfil -->
+                 <div class="mt-6">
+                     <h4 class="comic-title text-2xl text-yellow-400">EDITAR DATOS</h4>
+                     <div class="mt-2 space-y-4">
+                        <input type="text" id="profile-name-input" class="comic-input w-full text-center p-2 text-lg rounded-md" placeholder="Tu alias de héroe">
+                         <div class="flex justify-center space-x-4">
+                            <button id="profile-gender-male" class="gender-btn comic-btn p-2 w-32 bg-slate-700 border-2 border-slate-800 rounded-md text-gray-300 transition">HÉROE</button>
+                            <button id="profile-gender-female" class="gender-btn comic-btn p-2 w-32 bg-slate-700 border-2 border-slate-800 rounded-md text-gray-300 transition">HEROÍNA</button>
+                        </div>
+                        <button id="save-profile-btn" class="comic-btn w-full p-2 bg-green-500 text-white text-xl rounded-md">GUARDAR CAMBIOS</button>
+                     </div>
+                 </div>
+
+                 <!-- Sección Historial de Metas -->
+                 <div class="mt-8">
+                     <h4 class="comic-title text-2xl text-yellow-400">HISTORIAL DE METAS</h4>
+                     <div id="goal-history-list" class="mt-2 space-y-2 max-h-48 overflow-y-auto p-2 bg-slate-900/50 rounded-lg">
+                         <!-- El historial se cargará aquí -->
+                     </div>
+                 </div>
+
+                <button id="close-profile-btn" class="comic-btn w-full p-2 mt-6 bg-teal-500 text-slate-900 text-xl rounded-md">CERRAR</button>
+            </div>
+        </div>
+
+        <!-- Modal Detalle de Meta -->
+        <div id="goal-detail-modal" class="screen overlay custom-modal hidden p-4">
+            <div class="w-full max-w-lg my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel">
+                 <h3 id="goal-detail-title" class="comic-title text-4xl text-teal-400 text-center"></h3>
+                 <div id="goal-detail-plan" class="mt-4 p-4 bg-slate-900/50 rounded-lg text-left text-sm space-y-1 border-2 border-slate-700">
+                    <!-- Detalles del plan S.M.A.R.T. -->
+                 </div>
+                <button id="close-goal-detail-btn" class="comic-btn w-full p-2 mt-6 bg-teal-500 text-slate-900 text-xl rounded-md">CERRAR</button>
+            </div>
+        </div>
+
+        <!-- NUEVO: Modal para vincular cuenta -->
+        <div id="link-account-modal" class="screen overlay custom-modal hidden p-4">
+             <div class="w-full max-w-sm my-auto glass-panel-comic bg-slate-800/50 p-6 rounded-lg modal-panel">
+                 <h3 class="comic-title text-4xl text-green-400 text-center">GUARDAR PROGRESO</h3>
+                 <p class="text-gray-300 my-4 text-center">Crea una cuenta para guardar tu puntuación y racha. Podrás iniciar sesión en cualquier dispositivo.</p>
+                 <div class="space-y-4">
+                    <input type="email" id="link-email" class="comic-input w-full p-3 text-lg rounded-md" placeholder="Correo electrónico">
+                    <input type="password" id="link-password" class="comic-input w-full p-3 text-lg rounded-md" placeholder="Nueva contraseña">
+                    <button id="link-account-btn" class="comic-btn w-full p-3 bg-green-500 text-white text-xl rounded-md">VINCULAR CUENTA</button>
+                 </div>
+                <button id="close-link-account-btn" class="mt-4 text-gray-400 hover:underline">Cancelar</button>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Elemento para generar la imagen del reporte -->
+    <div id="report-card">
+        <div class="p-6 relative">
+            <h2 class="comic-title text-5xl text-center text-green-400">¡MISIÓN CUMPLIDA!</h2>
+            <p class="text-center text-gray-300 mt-2">
+                <span id="report-user-name"></span> ha completado la misión: <span id="report-user-goal"></span>
+            </p>
+            <div id="report-summary" class="mt-4 text-left text-gray-300"></div>
+            <div class="watermark">HECHO CON SMART</div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import functions from the Firebase SDKs
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut,
+            EmailAuthProvider,
+            linkWithCredential,
+            sendPasswordResetEmail
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, updateDoc, 
+            onSnapshot, collection, query, orderBy, limit, serverTimestamp, increment, addDoc, getDocs 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        // *** CORRECCIÓN: Importar getMessaging y getToken ***
+        import { 
+            getMessaging, 
+            getToken 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+        // --- Clave de API ---
+        const GEMINI_API_KEY = "AIzaSyDktR9pTylqj2a0n9JmE_4mMaM1z9Z7uvA";
+
+        // --- Configuración de Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDkshwefxgtpWmm6_-uQQ5P3cx23UWxAzA",
+            authDomain: "smart-495ba.firebaseapp.com",
+            projectId: "smart-495ba",
+            storageBucket: "smart-495ba.firebasestorage.app",
+            messagingSenderId: "417939342341",
+            appId: "1:417939342341:web:a746f90bc19fe4b535c86c"
+        };
+
+        // --- Inicialización de Firebase ---
+        const app = initializeApp(firebaseConfig);
+        const messaging = getMessaging(app); // Ahora 'getMessaging' está importado
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // --- Elementos del DOM ---
+        const screens = {
+            auth: document.getElementById('auth-screen'),
+            intro: document.getElementById('intro-screen'), 
+            heroSelect: document.getElementById('hero-select-screen'),
+            video: document.getElementById('video-screen'), 
+            loading: document.getElementById('loading-screen'),
+            goalInput: document.getElementById('goal-input-screen'), 
+            goalHelper: document.getElementById('goal-helper-screen'), 
+            planHub: document.getElementById('plan-hub-screen'),
+            mission: document.getElementById('mission-screen'), 
+            feedback: document.getElementById('feedback-modal'),
+            success: document.getElementById('success-modal'),
+            share: document.getElementById('share-modal'),
+            comebackNotification: document.getElementById('comeback-notification-modal'),
+            limit: document.getElementById('limit-modal'),
+            notifications: document.getElementById('notifications-modal'),
+            ranking: document.getElementById('ranking-modal'),
+            profile: document.getElementById('profile-modal'),
+            goalDetail: document.getElementById('goal-detail-modal'),
+            linkAccount: document.getElementById('link-account-modal')
+        };
+        // Auth elements
+        const authEmailInput = document.getElementById('auth-email');
+        const authPasswordInput = document.getElementById('auth-password');
+        const loginBtn = document.getElementById('login-btn');
+        const registerBtn = document.getElementById('register-btn');
+        const anonymousLoginBtn = document.getElementById('anonymous-login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const saveProgressBtn = document.getElementById('save-progress-btn');
+        const welcomeMessage = document.getElementById('welcome-message');
+        const introFormContainer = document.getElementById('intro-form-container');
+        const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+
+        // Link Account Elements
+        const linkEmailInput = document.getElementById('link-email');
+        const linkPasswordInput = document.getElementById('link-password');
+        const linkAccountBtn = document.getElementById('link-account-btn');
+        const closeLinkAccountBtn = document.getElementById('close-link-account-btn');
+
+        // Profile & History Elements
+        const profileBtn = document.getElementById('profile-btn');
+        const closeProfileBtn = document.getElementById('close-profile-btn');
+        const profileNameInput = document.getElementById('profile-name-input');
+        const profileGenderMaleBtn = document.getElementById('profile-gender-male');
+        const profileGenderFemaleBtn = document.getElementById('profile-gender-female');
+        const saveProfileBtn = document.getElementById('save-profile-btn');
+        const goalHistoryList = document.getElementById('goal-history-list');
+        const goalDetailTitle = document.getElementById('goal-detail-title');
+        const goalDetailPlan = document.getElementById('goal-detail-plan');
+        const closeGoalDetailBtn = document.getElementById('close-goal-detail-btn');
+
+
+        const nameInput = document.getElementById('name-input');
+        const continueIntroBtn = document.getElementById('continue-intro-btn');
+        const heroSelectName = document.getElementById('hero-select-name');
+        const confirmHeroBtn = document.getElementById('confirm-hero-btn');
+        const videoPlayer = document.getElementById('video-player');
+        const loadingText = document.getElementById('loading-text');
+        const goalPasswordInput = document.getElementById('goal-password-input');
+        const confirmGoalBtn = document.getElementById('confirm-goal-btn');
+        const helpGoalBtn = document.getElementById('help-goal-btn');
+        const chatWindow = document.getElementById('chat-window');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatBtn = document.getElementById('send-chat-btn');
+        const missionObjective = document.getElementById('mission-objective');
+        const progressBar = document.getElementById('progress-bar');
+        const moduleContainer = document.getElementById('module-container');
+        const missionInput = document.getElementById('mission-input');
+        const submitStepBtn = document.getElementById('submit-step-btn');
+        const finalPlan = document.getElementById('final-plan');
+        const restartBtn = document.getElementById('restart-btn');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackText = document.getElementById('feedback-text');
+        const feedbackOkBtn = document.getElementById('feedback-ok-btn');
+        const successName = document.getElementById('success-name');
+        const aiSummaryContainer = document.getElementById('ai-summary-container');
+        const aiRecommendationsContainer = document.getElementById('ai-recommendations-container');
+        const genderMaleBtn = document.getElementById('gender-male');
+        const genderFemaleBtn = document.getElementById('gender-female');
+        const heroListEl = document.getElementById('hero-list');
+        const generateReportBtn = document.getElementById('generate-report-btn');
+        const closeShareBtn = document.getElementById('close-share-btn');
+        const shareBtn = document.getElementById('share-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const reportImage = document.getElementById('report-image');
+        const comebackMessage = document.getElementById('comeback-message');
+        const closeComebackBtn = document.getElementById('close-comeback-btn');
+        const closeLimitBtn = document.getElementById('close-limit-btn');
+        const allowNotificationsBtn = document.getElementById('allow-notifications-btn');
+        const denyNotificationsBtn = document.getElementById('deny-notifications-btn');
+        const rankingList = document.querySelector('#ranking-modal #ranking-list');
+        const myRanking = document.querySelector('#ranking-modal #my-ranking');
+        const streakCounter = document.getElementById('streak-counter');
+        const showRankingBtn = document.getElementById('show-ranking-btn');
+        const closeRankingBtn = document.getElementById('close-ranking-btn');
+        
+        // --- Estado Global de la Aplicación ---
+        let userData = {};
+        let userId = null;
+        let rankingData = [];
+        let myRankData = {};
+        let selectedHero = null;
+        let currentStep = -1;
+        let missionPlan = {};
+        let userPersonalGoal = '';
+        let userGender = null;
+        let chatHistory = [];
+        let screenHistory = [];
+        let currentScreenId = 'auth';
+
+        const missionSteps = [
+            { key: 'S', title: 'ESPECÍFICO', video: 'video2.mp4', completed: false, generatedPrompt: '' },
+            { key: 'M', title: 'MEDIBLE', video: 'video3.mp4', completed: false, generatedPrompt: '' },
+            { key: 'A', title: 'ALCANZABLE', video: 'video4.mp4', completed: false, generatedPrompt: '' },
+            { key: 'R', title: 'RELEVANTE', video: 'video5.mp4', completed: false, generatedPrompt: '' },
+            { key: 'T', title: 'TEMPORAL', video: 'video_final.mp4', completed: false, generatedPrompt: '' }
+        ];
+
+        // --- Lógica Principal de la Aplicación ---
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                try {
+                    userId = user.uid;
+                    await setupUser(userId, user);
+                    setupRankingListener();
+                    setupUserListener(userId); // This will handle the navigation and loading screen
+                    setupPushNotifications(); // *** CORRECCIÓN: Esta llamada ahora funcionará ***
+                } catch (error) {
+                    console.error("Error en la inicialización del usuario:", error);
+                    showOverlay('loading', false);
+                    showFeedback({ title: "ERROR DE CONEXIÓN", text: "No se pudo cargar tu perfil. Intenta recargar la página.", color: '#ef4444', btnText: 'OK' });
+                    signOut(auth);
+                }
+            } else {
+                resetAppState();
+                showScreen('auth');
+            }
+        });
+
+        async function setupUser(uid, user) {
+            const userRef = doc(db, "users", uid);
+            let userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                 await setDoc(userRef, {
+                    name: user.isAnonymous ? "Héroe Anónimo" : user.email.split('@')[0],
+                    email: user.email || null,
+                    gender: null,
+                    score: 0,
+                    streak: 1,
+                    lastLogin: serverTimestamp(),
+                    missionsToday: 0,
+                    createdAt: serverTimestamp()
+                });
+                userSnap = await getDoc(userRef);
+            }
+            
+            const data = userSnap.data();
+            const today = new Date().setHours(0, 0, 0, 0);
+            const lastLoginDate = data.lastLogin?.toDate().setHours(0, 0, 0, 0) || 0;
+            
+            const updates = { lastLogin: serverTimestamp() };
+            
+            if (today > lastLoginDate) {
+                updates.missionsToday = 0;
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+
+                if (lastLoginDate === yesterday.getTime()) {
+                    updates.streak = increment(1);
+                } else {
+                    updates.streak = 1;
+                }
+            }
+            await updateDoc(userRef, updates);
+        }
+        
+        function updateUIForUser(user) {
+            const isRegistered = user && !user.isAnonymous;
+            const defaultNameFromEmail = isRegistered ? user.email.split('@')[0] : '';
+            const hasCustomName = userData.name && userData.name !== "Héroe Anónimo" && userData.name !== defaultNameFromEmail;
+
+            if (isRegistered) {
+                profileBtn.classList.remove('hidden');
+                logoutBtn.classList.remove('hidden');
+                saveProgressBtn.classList.add('hidden');
+                if (hasCustomName) {
+                    welcomeMessage.innerHTML = `¡Bienvenido de nuevo, <span class="text-teal-400">${userData.name}</span>!`;
+                    introFormContainer.classList.add('hidden');
+                } else {
+                    welcomeMessage.innerHTML = `¡Bienvenido, <span class="text-teal-400">${user.email}</span>! Elige tu alias para continuar.`;
+                    introFormContainer.classList.remove('hidden');
+                }
+            } else { // Anónimo
+                profileBtn.classList.add('hidden');
+                welcomeMessage.innerHTML = 'Estás jugando como <span class="text-yellow-400">invitado</span>.';
+                logoutBtn.classList.add('hidden');
+                saveProgressBtn.classList.remove('hidden');
+                introFormContainer.classList.remove('hidden');
+            }
+        }
+
+        function resetAppState() {
+            userId = null;
+            userData = {};
+            rankingData = [];
+            missionSteps.forEach(s => { s.completed = false; s.generatedPrompt = ''; });
+            goalPasswordInput.value = '';
+        }
+
+        function setupRankingListener() {
+            const usersRef = collection(db, "users");
+            const q = query(usersRef, orderBy("score", "desc"), limit(10));
+
+            onSnapshot(q, (snapshot) => {
+                rankingData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                updateRankingUI();
+            });
+        }
+        
+        function setupUserListener(uid) {
+            const userRef = doc(db, "users", uid);
+            let isInitialLoad = true;
+            onSnapshot(userRef, (docSnap) => {
+                if(docSnap.exists()){
+                    userData = { id: docSnap.id, ...docSnap.data() };
+                    
+                    if (auth.currentUser) {
+                        updateUIForUser(auth.currentUser);
+                    }
+
+                    if(document.activeElement !== nameInput) {
+                       const defaultName = auth.currentUser?.isAnonymous ? "Héroe Anónimo" : (auth.currentUser?.email?.split('@')[0] || '');
+                       nameInput.value = (userData.name !== defaultName) ? userData.name : '';
+                    }
+
+                    if(userData.gender) {
+                        userGender = userData.gender;
+                        if(userGender === 'male') { genderMaleBtn.classList.add('selected'); genderFemaleBtn.classList.remove('selected'); }
+                        if(userGender === 'female') { genderFemaleBtn.classList.add('selected'); genderMaleBtn.classList.remove('selected'); }
+                    }
+                    updateStreakUI();
+                    updateMyRankInUI();
+
+                    if (userData.score > 0 || userData.streak > 1) {
+                        showRankingBtn.classList.remove('hidden');
+                    } else {
+                        showRankingBtn.classList.add('hidden');
+                    }
+
+                    if (isInitialLoad) {
+                        navigateTo('intro');
+                        showOverlay('loading', false);
+                        isInitialLoad = false;
+                    }
+                }
+            });
+        }
+
+        function updateRankingUI() {
+            if (!rankingList) return;
+            rankingList.innerHTML = '';
+            rankingData.forEach((user, index) => {
+                const rank = index + 1;
+                const isCurrentUser = user.id === userId;
+                
+                const row = document.createElement('div');
+                row.className = `ranking-row p-2 text-white ${isCurrentUser ? 'my-rank' : ''}`;
+                row.innerHTML = `
+                    <span>${rank}</span>
+                    <span class="truncate">${user.name || 'Héroe Anónimo'}</span>
+                    <span class="flex items-center justify-center">
+                        <span class="streak-icon">🔥</span>
+                        <span>${user.streak || 0}</span>
+                    </span>
+                    <span class="text-yellow-400 text-right">${user.score || 0}</span>
+                `;
+                rankingList.appendChild(row);
+
+                if (isCurrentUser) {
+                    myRankData = { ...user, rank };
+                }
+            });
+            updateMyRankInUI();
+        }
+
+        function updateMyRankInUI() {
+            if (!myRanking) return;
+            const isUserInTop10 = rankingData.some(u => u.id === userId);
+            if (isUserInTop10) {
+                 myRanking.innerHTML = `<p class="text-center text-teal-400">¡Estás en el Top 10!</p>`;
+            } else if(userData && userData.score > 0) {
+                myRanking.innerHTML = `
+                     <div class="ranking-row my-rank p-2">
+                         <span>...</span>
+                         <span class="truncate">${userData.name || 'Héroe Anónimo'}</span>
+                         <span class="flex items-center justify-center">
+                             <span class="streak-icon">🔥</span>
+                             <span>${userData.streak || 0}</span>
+                         </span>
+                         <span class="text-yellow-400 text-right">${userData.score || 0}</span>
+                     </div>`;
+            } else {
+                 myRanking.innerHTML = `<p class="text-center text-gray-400">¡Completa una misión para entrar al ranking!</p>`;
+            }
+        }
+
+        function updateStreakUI() {
+            if(userData && userData.streak > 0) {
+                 streakCounter.innerHTML = `<h3 class="comic-title text-3xl text-amber-400 flex items-center justify-center">
+                 RACHA ACTUAL: <span class="streak-icon ml-2">🔥</span> ${userData.streak} DÍA${userData.streak > 1 ? 'S' : ''}</h3>`;
+            } else {
+                streakCounter.innerHTML = '';
+            }
+        }
+        
+        // *** CORRECCIÓN: Bloque de código de notificación roto eliminado de aquí ***
+
+        function showScreen(screenId) {
+            Object.values(screens).forEach(s => {
+                if (!s.classList.contains('overlay')) {
+                    s.classList.add('hidden');
+                }
+            });
+            if (screens[screenId]) {
+                screens[screenId].classList.remove('hidden');
+                if (screenId === 'planHub') {
+                    setTimeout(positionModules, 50);
+                }
+            }
+            currentScreenId = screenId;
+        }
+
+        function navigateTo(screenId) {
+            screenHistory.push(currentScreenId);
+            history.pushState({ screen: screenId }, "");
+            showScreen(screenId);
+        }
+
+        window.addEventListener('popstate', (event) => {
+            if (auth.currentUser) {
+                if (screenHistory.length > 0) {
+                    const previousScreenId = screenHistory.pop();
+                    showScreen(previousScreenId);
+                } else {
+                    showScreen('intro');
+                }
+            } else {
+                showScreen('auth');
+            }
+        });
+
+        async function callAI(systemPrompt, userQuery) { 
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${GEMINI_API_KEY}`; 
+            const payload = { contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: systemPrompt }] } }; 
+            try { 
+                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
+                if (!response.ok) { console.error("API Error:", await response.json()); return `SUGERENCIA:\nCortex OFFLINE (Code: ${response.status}).`; } 
+                const result = await response.json(); return result.candidates[0].content.parts[0].text; 
+            } catch (error) { console.error("Fetch Error:", error); return "SUGERENCIA:\nError de red al contactar con Cortex."; } 
+        }
+        
+        function playVideo(videoSrc, onEndedCallback) { 
+            navigateTo('video'); 
+            videoPlayer.src = videoSrc; 
+            videoPlayer.onended = onEndedCallback; 
+            videoPlayer.onerror = () => { console.warn(`Video not found: ${videoSrc}`); onEndedCallback(); }; 
+            videoPlayer.muted = false; const p = videoPlayer.play(); if(p) p.catch(e => { console.error("Video play failed", e); onEndedCallback(); }); 
+        }
+
+        function updatePlanHub() {
+            missionSteps.forEach((step, index) => {
+                const module = document.getElementById(`module-${step.key.toLowerCase()}`);
+                module.classList.remove('unlocked', 'completed');
+                if (step.completed) {
+                    module.classList.add('completed');
+                } else if (index === 0 || missionSteps[index - 1].completed) {
+                    module.classList.add('unlocked');
+                }
+            });
+        }
+
+        async function startPhase(stepIndex) {
+            if (stepIndex < 0 || stepIndex >= missionSteps.length || missionSteps[stepIndex].completed) return;
+            if (stepIndex > 0 && !missionSteps[stepIndex - 1].completed) return;
+            currentStep = stepIndex;
+            navigateTo('mission');
+            await updateMissionModule();
+        }
+
+        async function updateMissionModule() {
+            const step = missionSteps[currentStep];
+            progressBar.style.width = `${((currentStep) / missionSteps.length) * 100}%`;
+            const promptText = step.generatedPrompt;
+            const newModuleHTML = `
+                <div class="mission-module w-full absolute p-4 flex flex-col justify-center items-center text-center">
+                    <p class="text-sm text-teal-400">FASE ${currentStep + 1} DEL PLAN</p>
+                    <h3 class="comic-title text-6xl my-2 text-yellow-400">${step.title}</h3>
+                    <div class="glass-panel-comic p-4 mt-2 rounded-lg">
+                        <p class="text-gray-300">${promptText}</p>
+                    </div>
+                </div>`;
+            moduleContainer.innerHTML = newModuleHTML;
+        }
+
+        function showOverlay(screenId, show = true) {
+            if (screens[screenId]) {
+                if (show) screens[screenId].classList.remove('hidden');
+                else screens[screenId].classList.add('hidden');
+            }
+        }
+        
+        function showFeedback(config) {
+            const { title, text, color, btnText, onOk } = config;
+            feedbackTitle.textContent = title;
+            feedbackText.textContent = text;
+            feedbackTitle.style.color = color;
+            feedbackOkBtn.textContent = btnText;
+            feedbackOkBtn.onclick = () => {
+                showOverlay('feedback', false);
+                if (onOk) onOk();
+            };
+            showOverlay('feedback', true);
+        }
+
+        function handleGenericFeedback(feedback) {
+            showOverlay('loading', false);
+            const isApproved = feedback.startsWith("APROBADO:");
+            const parts = feedback.split('\n');
+            const bodyText = parts.length > 1 ? parts.slice(1).join('\n') : '';
+
+            if (isApproved) {
+                showFeedback({
+                    title: `¡GENIAL!`,
+                    text: bodyText,
+                    color: '#16a34a',
+                    btnText: '¡SIGAMOS!',
+                    onOk: () => {
+                        missionInput.value = '';
+                        missionSteps[currentStep].completed = true;
+                        const videoForStep = missionSteps[currentStep].video;
+                        playVideo(videoForStep, () => {
+                            const allDone = missionSteps.every(s => s.completed);
+                            if(allDone) {
+                                finishMission();
+                            } else {
+                                updatePlanHub();
+                                navigateTo('planHub');
+                            }
+                        });
+                    }
+                });
+            } else {
+                showFeedback({
+                     title: `¡UN MOMENTO!`,
+                     text: bodyText,
+                     color: '#d97706',
+                     btnText: '¡LO TENGO!',
+                });
+            }
+        }
+        
+        async function handleSubmit() {
+            const input = missionInput.value.trim();
+            if (input === '' || currentStep === -1) return;
+
+            loadingText.textContent = 'CORTEX ANALIZANDO...';
+            showOverlay('loading', true);
+
+            let tone = (userData.gender === 'female') 
+                ? "como una amiga inteligente y que te apoya. Tu tono es colaborativo, animado y positivo."
+                : "como un compañero de equipo inteligente y motivador. Tu tono es directo y positivo.";
+            
+            const systemPrompt = `Eres Cortex, una IA que habla ${tone}. Tu amigo ${userData.name} está creando un plan para lograr su meta: "${userPersonalGoal}". Están en la fase "${missionSteps[currentStep].title}". Su respuesta fue: "${input}".
+
+Tu tarea es responder de forma 100% conversacional y natural. NO uses negritas, asteriscos, ni ningún tipo de formato especial. Responde en uno de estos dos formatos EXACTOS:
+
+FORMATO 1 (Respuesta aprobada):
+Línea 1: APROBADO:
+Línea 2 en adelante: [Felicítale de forma genuina. Explícale con tus propias palabras por qué su idea es buena y cómo encaja en el plan. Anímale para el siguiente paso. Por ejemplo: "Buena! Me gusta cómo lo planteas, así dejas clarísimo el objetivo. Tiene todo el sentido. Vamos a ver el siguiente punto!"]
+
+FORMATO 2 (Necesita mejorar):
+Línea 1: SUGERENCIA:
+Línea 2 en adelante: [No le digas que está mal. En vez de eso, hazle una pregunta simple y amigable que le ayude a pensar un poco más y mejorar su respuesta. Por ejemplo: "Oye, es un buen comienzo. Y para que esa idea sea aún más potente, qué te parece si pensamos en cómo sabrás que lo has conseguido? Qué señal te lo indicará?".]`;
+
+            const feedback = await callAI(systemPrompt, `Evalúa la respuesta de ${userData.name}.`);
+            
+            if (feedback.startsWith("APROBADO:")) {
+                missionPlan[missionSteps[currentStep].key] = input;
+            }
+            handleGenericFeedback(feedback);
+        }
+        
+        async function finishMission() {
+            loadingText.textContent = '¡COMPILANDO VICTORIA!';
+            showOverlay('loading', true);
+            
+            // Guardar la meta en el historial
+            const goalsRef = collection(db, "users", userId, "goals");
+            await addDoc(goalsRef, {
+                goal: userPersonalGoal,
+                plan: missionPlan,
+                completedAt: serverTimestamp()
+            });
+
+            const userRef = doc(db, "users", userId);
+            await updateDoc(userRef, {
+                score: increment(100),
+                missionsToday: increment(1)
+            });
+
+            const systemPrompt = `Eres Cortex, una IA con una personalidad sarcástica, divertida y brutalmente honesta. Tu amigo, ${userData.name}, acaba de completar su plan para su meta: "${userPersonalGoal}".
+
+Sus respuestas fueron:
+S: ${missionPlan.S}
+M: ${missionPlan.M}
+A: ${missionPlan.A}
+R: ${missionPlan.R}
+T: ${missionPlan.T}
+
+Tu tarea es darle el feedback final. NO uses negritas ni asteriscos. Sigue estas reglas:
+
+1.  Crea un párrafo de felicitación sarcástica y concisa. Felicítalo y resume su plan en un solo párrafo corto y potente. Ejemplo: "Felicidades, ${userData.name}! Así que tu gran plan es '${userPersonalGoal}'. Está genial, pero de nada sirve si no te pones las pilas. En resumen: vas a hacer [acción específica S] para lograr [resultado medible M] en [tiempo T], porque es importante para ti. Ahora, a lo que vinimos.".
+
+2.  Inserta el Separador. EXACTAMENTE así:
+---RECOMMENDATIONS---
+
+3.  Crea las recomendaciones como una lista. Empieza con la frase "Ahora, para que no te quedes en el intento, aquí van un par de cosas que DEBES hacer:". Luego, escribe dos recomendaciones cortas, directas y prácticas en formato de lista, usando un guion (-) al inicio de cada una.`;
+
+            const summaryAndRecs = await callAI(systemPrompt, `Genera el resumen final para ${userData.name}.`);
+
+            const parts = summaryAndRecs.split('---RECOMMENDATIONS---');
+            const summaryText = parts[0] ? parts[0].trim() : "No se pudo generar el resumen del plan.";
+            const recommendationsText = parts[1] ? parts[1].trim() : "No se pudieron generar recomendaciones.";
+
+            aiSummaryContainer.innerHTML = `<p>${summaryText}</p>`;
+            aiRecommendationsContainer.innerHTML = `<p>${recommendationsText.replace(/- /g, '<br>- ').trim()}</p>`;
+
+            finalPlan.innerHTML = Object.entries(missionPlan).map(([key, value]) => {
+                const step = missionSteps.find(s => s.key === key);
+                return `<p><span class="text-teal-400">${step.title}:</span> ${value}</p>`;
+            }).join('');
+            
+            showOverlay('loading', false);
+            navigateTo('success');
+        }
+
+        // --- Lógica de Autenticación ---
+
+        loginBtn.addEventListener('click', async () => {
+            const email = authEmailInput.value.trim();
+            const password = authPasswordInput.value.trim();
+            if (!email || !password) {
+                return showFeedback({ title: "ERROR", text: "Correo y contraseña son requeridos.", color: '#ef4444', btnText: 'OK' });
+            }
+            showOverlay('loading', true);
+            loadingText.textContent = 'INICIANDO SESIÓN...';
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                showOverlay('loading', false);
+                showFeedback({ title: "ERROR DE INICIO DE SESIÓN", text: getAuthErrorMessage(error), color: '#ef4444', btnText: 'OK' });
+            }
+        });
+
+        registerBtn.addEventListener('click', async () => {
+            const email = authEmailInput.value.trim();
+            const password = authPasswordInput.value.trim();
+            if (!email || !password) {
+                return showFeedback({ title: "ERROR", text: "Correo y contraseña son requeridos.", color: '#ef4444', btnText: 'OK' });
+            }
+            showOverlay('loading', true);
+            loadingText.textContent = 'REGISTRANDO CUENTA...';
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                showOverlay('loading', false);
+                showFeedback({ title: "ERROR DE REGISTRO", text: getAuthErrorMessage(error), color: '#ef4444', btnText: 'OK' });
+            }
+        });
+
+        anonymousLoginBtn.addEventListener('click', () => {
+             showOverlay('loading', true);
+             loadingText.textContent = 'INGRESANDO COMO INVITADO...';
+             signInAnonymously(auth).catch((error) => {
+                showOverlay('loading', false);
+                showFeedback({ title: "ERROR", text: "No se pudo iniciar como invitado. Inténtalo de nuevo.", color: '#ef4444', btnText: 'OK' });
+             });
+        });
+
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (error) {
+                console.error("Error al cerrar sesión:", error);
+            }
+        });
+
+        saveProgressBtn.addEventListener('click', () => {
+            showOverlay('linkAccount', true);
+        });
+        
+        linkAccountBtn.addEventListener('click', async () => {
+            const email = linkEmailInput.value.trim();
+            const password = linkPasswordInput.value.trim();
+            if (!email || !password) {
+                return showFeedback({ title: "ERROR", text: "Correo y contraseña son requeridos.", color: '#ef4444', btnText: 'OK' });
+            }
+
+            showOverlay('loading', true);
+            loadingText.textContent = 'VINCULANDO CUENTA...';
+
+            try {
+                const credential = EmailAuthProvider.credential(email, password);
+                await linkWithCredential(auth.currentUser, credential);
+                
+                const userRef = doc(db, "users", userId);
+                await updateDoc(userRef, { email: email, name: email.split('@')[0] });
+
+                showOverlay('loading', false);
+                showOverlay('linkAccount', false);
+                showFeedback({ title: "¡PROGRESO GUARDADO!", text: `Tu cuenta ha sido vinculada a ${email}. Ahora puedes iniciar sesión en cualquier dispositivo.`, color: '#16a34a', btnText: '¡GENIAL!' });
+            } catch (error) {
+                showOverlay('loading', false);
+                showFeedback({ title: "ERROR AL GUARDAR", text: getAuthErrorMessage(error), color: '#ef4444', btnText: 'OK' });
+            }
+        });
+
+        closeLinkAccountBtn.addEventListener('click', () => {
+            showOverlay('linkAccount', false);
+        });
+
+
+        forgotPasswordBtn.addEventListener('click', async () => {
+            const email = prompt("Introduce tu correo electrónico para restablecer tu contraseña:");
+            if (!email) return;
+            showOverlay('loading', true);
+            loadingText.textContent = 'ENVIANDO CORREO...';
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showOverlay('loading', false);
+                showFeedback({ title: "CORREO ENVIADO", text: "Si existe una cuenta con ese correo, recibirás un enlace para restablecer tu contraseña.", color: '#14b8a6', btnText: '¡ENTENDIDO!' });
+            } catch (error) {
+                showOverlay('loading', false);
+                showFeedback({ title: "ERROR", text: getAuthErrorMessage(error), color: '#ef4444', btnText: 'OK' });
+            }
+        });
+
+        function getAuthErrorMessage(error) {
+            switch (error.code) {
+                case 'auth/user-not-found': return "Ese correo no está registrado. Por favor, regístrate primero.";
+                case 'auth/invalid-email': return "El formato del correo no es válido.";
+                case 'auth/wrong-password': return "La contraseña es incorrecta.";
+                case 'auth/email-already-in-use': return "Ese correo ya está registrado.";
+                case 'auth/weak-password': return "La contraseña debe tener al menos 6 caracteres.";
+                default: return "Ocurrió un error inesperado. Por favor, inténtalo de nuevo.";
+            }
+        }
+
+
+        // --- Event Listeners del Juego ---
+        
+        continueIntroBtn.addEventListener('click', async () => {
+            const isRegistered = auth.currentUser && !auth.currentUser.isAnonymous;
+            const defaultNameFromEmail = isRegistered ? auth.currentUser.email.split('@')[0] : '';
+            const hasCustomName = userData.name && userData.name !== "Héroe Anónimo" && userData.name !== defaultNameFromEmail;
+
+            if (isRegistered && hasCustomName) {
+                heroSelectName.textContent = userData.name;
+                successName.textContent = userData.name;
+                navigateTo('heroSelect');
+                return;
+            }
+
+            const userNameInputVal = nameInput.value.trim();
+            if (!userNameInputVal) { 
+                return showFeedback({ title: "ALIAS REQUERIDO", text: "¡Un héroe necesita un alias para la misión!", color: '#ef4444', btnText: 'OK' });
+            }
+            if (!userGender) { 
+                return showFeedback({ title: "GÉNERO REQUERIDO", text: "¡Identifícate para la misión, por favor!", color: '#ef4444', btnText: 'OK' });
+            }
+        
+            const userRef = doc(db, "users", userId);
+            await updateDoc(userRef, { name: userNameInputVal, gender: userGender });
+
+            heroSelectName.textContent = userNameInputVal;
+            successName.textContent = userNameInputVal;
+            navigateTo('heroSelect');
+        });
+        
+        confirmGoalBtn.addEventListener('click', () => {
+            if (userData.missionsToday >= 3) {
+                showOverlay('limit', true);
+                return;
+            }
+            confirmGoalAction();
+        });
+
+        heroListEl.addEventListener('click', (e) => {
+            const card = e.target.closest('.hero-card');
+            if (!card) return;
+            document.querySelectorAll('.hero-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            selectedHero = card.dataset.hero;
+            confirmHeroBtn.disabled = false;
+            confirmHeroBtn.classList.remove('bg-slate-600', 'text-slate-400');
+            confirmHeroBtn.classList.add('bg-teal-500', 'text-slate-900');
+        });
+
+        genderMaleBtn.addEventListener('click', () => { userGender = 'male'; genderMaleBtn.classList.add('selected'); genderFemaleBtn.classList.remove('selected'); });
+        genderFemaleBtn.addEventListener('click', () => { userGender = 'female'; genderFemaleBtn.classList.add('selected'); genderMaleBtn.classList.remove('selected'); });
+
+        confirmHeroBtn.addEventListener('click', () => { if (selectedHero) playVideo('video1.mp4', () => navigateTo('goalInput')); });
+        
+        function confirmGoalAction() {
+            userPersonalGoal = goalPasswordInput.value.trim();
+            if(!userPersonalGoal) { 
+                return showFeedback({ title: "OBJETIVO VACÍO", text: "¡Toda misión necesita un objetivo!", color: '#ef4444', btnText: 'OK' });
+            }
+            
+            let isPlanGenerated = false;
+
+            async function generatePlanInBackground() {
+                const tone = (userData.gender === 'female')
+                    ? "como una amiga que le ayuda a desglosar una idea. El tono es de apoyo y colaborativo."
+                    : "como un compañero de equipo que le ayuda a pensar en los pasos. El tono es directo, simple y amigable.";
+
+                const systemPrompt = `Eres Cortex, una IA que actúa ${tone}. La meta de tu amigo/a ${userData.name} es "${userPersonalGoal}".
+Tu misión es crear UNA PREGUNTA conversacional y muy sencilla para CADA uno de los 5 pasos del método S.M.A.R.T. (Specific, Measurable, Achievable, Relevant, Time-bound).
+No expliques la teoría. Solo haz la pregunta de forma natural y sin usar negritas ni asteriscos.
+
+Debes devolver un único objeto JSON con las claves "S", "M", "A", "R", "T".
+
+Ejemplo de formato de respuesta:
+{
+  "S": "¿Cómo se vería exactamente si lo lograras? Si pudieras pintarlo, ¿qué detalles tendría?",
+  "M": "Ok, suena genial. ¿Y cómo vamos a saber que lo hemos conseguido? ¿Qué número o señal nos dirá que lo logramos?",
+  "A": "Siendo realistas, ¿qué necesitarías para que esto sea posible?",
+  "R": "Buena idea. Y, sinceramente, ¿por qué es importante para ti lograr esto ahora mismo?",
+  "T": "Perfecto. Para ponerle un motor a esto, ¿para cuándo te gustaría tenerlo listo?"
+}`;
+                
+                const responseText = await callAI(systemPrompt, `Genera las 5 preguntas S.M.A.R.T. para la meta.`);
+                try {
+                    const questions = JSON.parse(responseText);
+                    missionSteps.forEach(step => {
+                        step.generatedPrompt = questions[step.key] || `¿Cómo puedes hacer que tu meta sea más ${step.title.toLowerCase()}?`;
+                    });
+                } catch(e) {
+                    console.error("Error al parsear JSON de la IA:", e);
+                    // Fallback por si la IA no devuelve un JSON válido
+                    missionSteps.forEach(step => {
+                        step.generatedPrompt = `Cuéntame más sobre el aspecto "${step.title}" de tu meta.`;
+                    });
+                }
+                isPlanGenerated = true;
+            }
+
+            function onVideoEnd() {
+                if (isPlanGenerated) {
+                    missionObjective.textContent = `OBJETIVO: ${userPersonalGoal}`;
+                    updatePlanHub();
+                    navigateTo('planHub');
+                } else {
+                    loadingText.textContent = '¡PLAN LISTO!';
+                    showOverlay('loading', true);
+                    const checkInterval = setInterval(() => {
+                        if (isPlanGenerated) {
+                            clearInterval(checkInterval);
+                            setTimeout(() => {
+                                showOverlay('loading', false);
+                                missionObjective.textContent = `OBJETIVO: ${userPersonalGoal}`;
+                                updatePlanHub();
+                                navigateTo('planHub');
+                            }, 500);
+                        }
+                    }, 100);
+                }
+            }
+
+            generatePlanInBackground();
+            playVideo('video_intro.mp4', onVideoEnd);
+        }
+
+        helpGoalBtn.addEventListener('click', handleGoalHelp);
+        document.getElementById('module-s').addEventListener('click', () => startPhase(0));
+        document.getElementById('module-m').addEventListener('click', () => startPhase(1));
+        document.getElementById('module-a').addEventListener('click', () => startPhase(2));
+        document.getElementById('module-r').addEventListener('click', () => startPhase(3));
+        document.getElementById('module-t').addEventListener('click', () => startPhase(4));
+        submitStepBtn.addEventListener('click', handleSubmit);
+        sendChatBtn.addEventListener('click', handleChatResponse);
+        chatInput.addEventListener('keyup', (event) => { if (event.key === 'Enter') handleChatResponse(); });
+
+        restartBtn.addEventListener('click', () => { 
+            showOverlay('success', false);
+            screenHistory = [];
+            missionSteps.forEach(s => { s.completed = false; s.generatedPrompt = ''; }); 
+            navigateTo('intro'); 
+        });
+
+        closeShareBtn.addEventListener('click', () => showOverlay('share', false));
+        closeComebackBtn.addEventListener('click', () => showOverlay('comebackNotification', false));
+
+        generateReportBtn.addEventListener('click', async () => {
+             loadingText.textContent = 'GENERANDO REPORTE...';
+            showOverlay('loading', true);
+
+            const reportCard = document.getElementById('report-card');
+            document.getElementById('report-user-name').textContent = userData.name;
+            document.getElementById('report-user-goal').textContent = userPersonalGoal;
+            document.getElementById('report-summary').innerHTML = aiSummaryContainer.innerHTML + '<br><br>' + aiRecommendationsContainer.innerHTML;
+
+            const canvas = await html2canvas(reportCard, { backgroundColor: '#1a202c' });
+            const dataUrl = canvas.toDataURL('image/png');
+
+            reportImage.src = dataUrl;
+            downloadBtn.href = dataUrl;
+            
+            showOverlay('loading', false);
+            showOverlay('share', true);
+        });
+        shareBtn.addEventListener('click', async () => {
+            try {
+                const dataUrl = reportImage.src;
+                const blob = await (await fetch(dataUrl)).blob();
+                const file = new File([blob], 'mi-plan-smart.png', { type: blob.type });
+
+                if (navigator.share) {
+                    await navigator.share({
+                        title: '¡Misión Cumplida!',
+                        text: `¡He completado mi plan para '${userPersonalGoal}' con la ayuda de SMART!`,
+                        files: [file],
+                    });
+                } else {
+                    alert("Tu navegador no soporta la función de compartir. ¡Usa el botón de descargar!");
+                }
+            } catch (err) {
+                console.error("Error al compartir:", err);
+                alert("Hubo un error al intentar compartir. Por favor, usa el botón de descargar.");
+            }
+        });
+        async function handleGoalHelp() {
+            navigateTo('goalHelper');
+            chatHistory = [];
+            chatWindow.innerHTML = '';
+            appendChatMessage('...', 'cortex-typing');
+
+            const systemPrompt = `Eres Cortex, un asistente IA con el rol de un coach o mentor amigable. Tu objetivo es ayudar a ${userData.name} a descubrir una meta personal. Tu estilo es humano, motivador y muy conciso. No uses negritas ni asteriscos.
+
+Para empezar, haz una pregunta inicial cálida y abierta para explorar sus intereses. Por ejemplo: "Hola, ${userData.name}! A veces lo más difícil es saber por dónde empezar. Para conocernos un poco, cuéntame, hay algo que te apasione o te interese en este momento?".`;
+            
+            const firstQuestion = await callAI(systemPrompt, `Inicia la conversación con ${userData.name}.`);
+            
+            const typingBubble = document.getElementById(`${chatWindow.id}-typing`);
+            if(typingBubble) {
+                typingBubble.removeAttribute('id');
+                typingBubble.innerHTML = `<span>Cortex:</span> ${firstQuestion}`;
+            }
+
+            chatHistory.push({ role: 'model', parts: [{ text: firstQuestion }] });
+        }
+        async function handleChatResponse() {
+            const userInput = chatInput.value.trim();
+            if (!userInput) return;
+            appendChatMessage(userInput, 'user');
+            chatInput.value = '';
+            chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
+
+            const typingId = appendChatMessage('...', 'cortex-typing');
+
+            let fullConversation = chatHistory.map(msg => `${msg.role === 'user' ? userData.name : 'Cortex'}: ${msg.parts[0].text}`).join('\n');
+            
+            const systemPrompt = `Eres Cortex, un asistente IA con el rol de un coach amigable y conciso. Estás ayudando a ${userData.name} a definir una meta. No uses negritas ni asteriscos.
+
+Tu objetivo es guiar la conversación con preguntas cortas. Cuando identifiques una meta potencial, resúmela y usa la frase de salida EXACTA: "Vale, basándome en lo que hemos hablado, te recomiendo esta meta: [Aquí la meta sugerida]. Qué te parece? Si te gusta, puedes usarla en la pantalla anterior para empezar tu plan."
+
+Esta es la conversación hasta ahora:
+${fullConversation}
+
+Genera tu siguiente respuesta corta para seguir sondeando, o si ya tienes suficiente información, genera la sugerencia final.`;
+
+            const nextResponse = await callAI(systemPrompt, `Genera la siguiente respuesta de Cortex.`);
+            
+            const typingBubble = document.getElementById(typingId);
+            if(typingBubble) {
+                typingBubble.removeAttribute('id');
+                typingBubble.innerHTML = `<span>Cortex:</span> ${nextResponse}`;
+            }
+
+            chatHistory.push({ role: 'model', parts: [{ text: nextResponse }] });
+
+            if (nextResponse.includes("puedes usarla en la pantalla anterior")) {
+                chatInput.disabled = true;
+                sendChatBtn.textContent = 'VOLVER A LA MISIÓN';
+                sendChatBtn.onclick = () => history.back();
+            }
+        }
+        function positionModules() {
+            const container = document.getElementById('plan-hub-container');
+            if (!container) return;
+            const modules = container.querySelectorAll('.plan-module');
+            const radius = container.offsetWidth / 2.8;
+            const angleIncrement = (Math.PI * 1.33) / (modules.length - 1);
+            const startAngle = -Math.PI * 1.16;
+
+            modules.forEach((module, index) => {
+                const angle = startAngle + (angleIncrement * index);
+                const x = (container.offsetWidth / 2) + radius * Math.cos(angle) - (module.offsetWidth / 2);
+                const y = (container.offsetHeight / 2) + radius * Math.sin(angle) - (module.offsetHeight / 2) + 20;
+                module.style.left = `${x}px`;
+                module.style.top = `${y}px`;
+            });
+        }
+        function appendChatMessage(message, sender, container = chatWindow) {
+            const bubble = document.createElement('div');
+            bubble.classList.add('chat-bubble', 'p-3', 'rounded-lg', 'w-fit', 'glass-panel-comic');
+            
+            const typingId = `${container.id}-typing`;
+            if (sender === 'cortex-typing') {
+                bubble.classList.add('chat-bubble-cortex', 'self-start');
+                bubble.id = typingId;
+                bubble.innerHTML = `<div class="typing-indicator"><span class="dot1"></span><span class="dot2"></span><span></span></div>`;
+            } else if (sender === 'cortex') {
+                bubble.classList.add('chat-bubble-cortex', 'self-start');
+                bubble.innerHTML = `<span>Cortex:</span> ${message}`;
+            } else { // user
+                bubble.classList.add('chat-bubble-user', 'self-end');
+                bubble.innerHTML = `<span>Tú:</span> ${message}`;
+            }
+            container.appendChild(bubble);
+            container.scrollTop = container.scrollHeight;
+            return typingId;
+        }
+
+        // --- Perfil e Historial ---
+        profileBtn.addEventListener('click', async () => {
+            // Cargar datos actuales en el modal
+            profileNameInput.value = userData.name !== "Héroe Anónimo" && userData.name !== (auth.currentUser?.email?.split('@')[0]) ? userData.name : '';
+            if (userData.gender === 'male') {
+                profileGenderMaleBtn.classList.add('selected');
+                profileGenderFemaleBtn.classList.remove('selected');
+            } else if (userData.gender === 'female') {
+                profileGenderFemaleBtn.classList.add('selected');
+                profileGenderMaleBtn.classList.remove('selected');
+            }
+            
+            // Cargar historial
+            await loadGoalHistory();
+
+            showOverlay('profile', true);
+        });
+
+        async function loadGoalHistory() {
+            goalHistoryList.innerHTML = '<p class="text-gray-400">Cargando historial...</p>';
+            const goalsRef = collection(db, "users", userId, "goals");
+            const q = query(goalsRef, orderBy("completedAt", "desc"));
+            const querySnapshot = await getDocs(q);
+            
+            goalHistoryList.innerHTML = '';
+            if (querySnapshot.empty) {
+                goalHistoryList.innerHTML = '<p class="text-gray-400">Aún no has completado ninguna misión.</p>';
+            } else {
+                querySnapshot.forEach(doc => {
+                    const goal = doc.data();
+                    const item = document.createElement('div');
+                    item.className = 'goal-history-item p-3 rounded-lg';
+                    const date = goal.completedAt?.toDate().toLocaleDateString() || 'Fecha desconocida';
+                    item.innerHTML = `
+                        <p class="text-white">${goal.goal}</p>
+                        <p class="text-xs text-gray-400">Completado: ${date}</p>
+                    `;
+                    item.addEventListener('click', () => showGoalDetails(goal));
+                    goalHistoryList.appendChild(item);
+                });
+            }
+        }
+
+        function showGoalDetails(goal) {
+            goalDetailTitle.textContent = goal.goal;
+            goalDetailPlan.innerHTML = Object.entries(goal.plan).map(([key, value]) => {
+                const step = missionSteps.find(s => s.key === key);
+                return `<p><span class="text-teal-400">${step.title}:</span> ${value}</p>`;
+            }).join('');
+            showOverlay('goalDetail', true);
+        }
+
+        saveProfileBtn.addEventListener('click', async () => {
+            const newName = profileNameInput.value.trim();
+            const newGender = profileGenderMaleBtn.classList.contains('selected') ? 'male' : (profileGenderFemaleBtn.classList.contains('selected') ? 'female' : null);
+
+            if (!newName) {
+                return showFeedback({ title: "ALIAS REQUERIDO", text: "Tu alias no puede estar vacío.", color: '#ef4444', btnText: 'OK' });
+            }
+
+            showOverlay('loading', true);
+            loadingText.textContent = 'GUARDANDO PERFIL...';
+            try {
+                const userRef = doc(db, "users", userId);
+                await updateDoc(userRef, { name: newName, gender: newGender });
+                showOverlay('loading', false);
+                showOverlay('profile', false);
+                showFeedback({ title: "¡ÉXITO!", text: "Tu perfil ha sido actualizado.", color: '#16a34a', btnText: '¡GENIAL!' });
+            } catch (error) {
+                showOverlay('loading', false);
+                 showFeedback({ title: "ERROR", text: "No se pudo guardar tu perfil. Inténtalo de nuevo.", color: '#ef4444', btnText: 'OK' });
+            }
+        });
+
+
+        profileGenderMaleBtn.addEventListener('click', () => { profileGenderMaleBtn.classList.add('selected'); profileGenderFemaleBtn.classList.remove('selected'); });
+        profileGenderFemaleBtn.addEventListener('click', () => { profileGenderFemaleBtn.classList.add('selected'); profileGenderMaleBtn.classList.remove('selected'); });
+        closeProfileBtn.addEventListener('click', () => showOverlay('profile', false));
+        closeGoalDetailBtn.addEventListener('click', () => showOverlay('goalDetail', false));
+
+
+        // --- INICIALIZACIÓN ---
+        showRankingBtn.addEventListener('click', () => showOverlay('ranking', true));
+        closeRankingBtn.addEventListener('click', () => showOverlay('ranking', false));
+        closeLimitBtn.addEventListener('click', () => showOverlay('limit', false));
+        
+        // *** CORRECCIÓN: Los listeners de notificación rotos fueron eliminados de aquí ***
+
+        window.addEventListener('load', () => {
+             showScreen('auth');
+             history.replaceState({ screen: 'auth' }, '');
+        });
+
+        
+        // --- Lógica de Notificaciones Push ---
+        // *** CORRECCIÓN: Este bloque ahora está DENTRO del <script> ***
+
+        // Esta función se llama cuando la app carga para un usuario logueado.
+        function setupPushNotifications() {
+          if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+            console.log("Este navegador no soporta notificaciones o service workers.");
+            return;
+          }
+
+          // Si el permiso aún no se ha pedido, muestra el modal después de 5 segundos.
+          if (Notification.permission === 'default') {
+            setTimeout(() => showOverlay('notifications', true), 5000);
+          }
+        }
+
+        // Se llama cuando el usuario hace clic en "SÍ, ACTIVAR!"
+        async function requestAndSaveToken() {
+          try {
+            const permission = await Notification.requestPermission();
+
+            if (permission === 'granted') {
+              console.log('Permiso de notificaciones concedido.');
+              showFeedback({
+                  title: '¡LISTO!', 
+                  text: 'Notificaciones activadas. Te avisaremos de cualquier novedad.', 
+                  color: '#16a34a', 
+                  btnText: 'GENIAL!'
+              });
+
+              // Obtener el token del dispositivo
+              // IMPORTANTE: Reemplaza 'BNwTTuaftKh_LV0Z529f6Gof76DQbtpv-4ydN7ZSjvNCv4vb3qLmhOJ9HY2wOoTAuEfNgsmjycFvrCy0IlFTeSY' con tu clave VAPID de Firebase
+              const currentToken = await getToken(messaging, { vapidKey: 'BNwTTuaftKh_LV0Z529f6Gof76DQbtpv-4ydN7ZSjvNCv4vb3qLmhOJ9HY2wOoTAuEfNgsmjycFvrCy0IlFTeSY' });
+
+              if (currentToken) {
+                console.log('Token FCM obtenido:', currentToken);
+                // Guardar el token en la base de datos para este usuario
+                const userRef = doc(db, 'users', userId);
+                await updateDoc(userRef, {
+                  fcmToken: currentToken
+                });
+                console.log('Token guardado en Firestore.');
+              } else {
+                console.log('No se pudo obtener el token de registro. Asegúrate de tener el archivo firebase-messaging-sw.js');
+              }
+            } else {
+              console.log('Permiso de notificaciones denegado.');
+              showFeedback({
+                  title: 'ENTENDIDO', 
+                  text: 'No te molestaremos con notificaciones. Puedes activarlas en la configuración de tu navegador si cambias de opinión.', 
+                  color: '#d97706', 
+                  btnText: 'OK'
+              });
+            }
+          } catch (error) {
+            console.error('Ocurrió un error durante el proceso de notificación:', error);
+          }
+        }
+
+        // Conecta los botones del modal a las nuevas funciones
+        allowNotificationsBtn.addEventListener('click', () => {
+            showOverlay('notifications', false);
+            requestAndSaveToken();
+        });
+
+        denyNotificationsBtn.addEventListener('click', () => {
+            showOverlay('notifications', false);
+            showFeedback({title: 'ENTENDIDO', text: 'No se enviarán notificaciones.', color: '#d97706', btnText: 'OK'});
+        });
+
+
+    </script>
+</body>
+</html>
